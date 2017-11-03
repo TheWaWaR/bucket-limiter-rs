@@ -10,13 +10,14 @@ use redis::{
     Commands,
 };
 
-const LUA_SCRIPT: &'static str = include_str!("limiter.lua");
-const REDIS_HOST: &'static str = "localhost";
+const LUA_SCRIPT: &str = include_str!("limiter.lua");
+const KEY_PREFIX: &str = "limiter";
+const REDIS_HOST: &str = "localhost";
 const REDIS_PORT: u16 = 6379;
 const REDIS_DB: u16 = 0;
 
 fn timestamp_ms(t: DateTime<Utc>) -> i64 {
-    t.timestamp() * 1000 + t.timestamp_subsec_millis() as i64
+    t.timestamp() * 1000 + i64::from(t.timestamp_subsec_millis())
 }
 
 fn now_ms() -> i64 {
@@ -44,6 +45,7 @@ pub struct RedisLimiter {
     script: RedisScript,
 }
 
+#[derive(Default)]
 pub struct RedisLimiterBuilder<'a> {
     redis_cli: Option<RedisClient>,
     host: Option<&'a str>,
@@ -66,7 +68,7 @@ impl<'a> RedisLimiterBuilder<'a> {
     }
     pub fn build(self) -> RedisLimiter {
         let script_str = self.script_str.unwrap_or(LUA_SCRIPT);
-        let key_prefix = self.key_prefix.unwrap_or("limiter");
+        let key_prefix = self.key_prefix.unwrap_or(KEY_PREFIX);
         if let Some(redis_cli) = self.redis_cli {
             RedisLimiter::new(redis_cli, key_prefix, script_str)
         } else {
