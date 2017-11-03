@@ -68,7 +68,7 @@ impl<'a> RedisLimiterBuilder<'a> {
         let script_str = self.script_str.unwrap_or(LUA_SCRIPT);
         let key_prefix = self.key_prefix.unwrap_or("limiter");
         if let Some(redis_cli) = self.redis_cli {
-            RedisLimiter::from(redis_cli, key_prefix, script_str)
+            RedisLimiter::new(redis_cli, key_prefix, script_str)
         } else {
             let url = format!(
                 "redis://{}:{}/{}",
@@ -77,7 +77,7 @@ impl<'a> RedisLimiterBuilder<'a> {
                 self.db.unwrap_or(REDIS_DB)
             );
             let client = RedisClient::open(url.as_str()).unwrap();
-            RedisLimiter::from(client, key_prefix, script_str)
+            RedisLimiter::new(client, key_prefix, script_str)
         }
     }
 
@@ -108,7 +108,7 @@ impl<'a> RedisLimiterBuilder<'a> {
 }
 
 impl RedisLimiter {
-    pub fn from<'a>(
+    pub fn new<'a>(
         redis_cli: RedisClient,
         key_prefix: &'a str,
         script_str: &'a str,
