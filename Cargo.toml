@@ -5,6 +5,7 @@ license = "MIT"
 description = "Token bucket like limiter library based on redis storage"
 keywords = ["redis", "bucket", "limiter", "rate", "token"]
 authors = ["Qian Linfeng <thewawar@gmail.com>"]
+repository = "https://github.com/TheWaWaR/bucket-limiter-rs"
 
 [dependencies]
 redis = "^0.8.0"
