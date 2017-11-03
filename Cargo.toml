@@ -1,7 +1,11 @@
 [package]
 name = "bucket-limiter"
 version = "0.1.0"
+license = "MIT"
+description = "Token bucket like limiter library based on redis storage"
+keywords = ["redis", "bucket", "limiter", "rate", "token"]
 authors = ["Qian Linfeng <thewawar@gmail.com>"]
 
 [dependencies]
 redis = "^0.8.0"
+chrono = "0.4"
