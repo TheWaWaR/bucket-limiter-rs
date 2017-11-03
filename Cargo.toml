@@ -1,6 +1,6 @@
 [package]
 name = "bucket-limiter"
-version = "0.1.0"
+version = "0.1.1"
 license = "MIT"
 description = "Token bucket like limiter library based on redis storage"
 keywords = ["redis", "bucket", "limiter", "rate", "token"]

@@ -4,8 +4,11 @@ extern crate chrono;
 use std::default::Default;
 
 use chrono::{DateTime, Utc};
-pub use redis::{Client as RedisClient};
-use redis::{Script as RedisScript, Commands};
+use redis::{
+    Client as RedisClient,
+    Script as RedisScript,
+    Commands,
+};
 
 const LUA_SCRIPT: &'static str = include_str!("limiter.lua");
 const REDIS_HOST: &'static str = "localhost";
@@ -160,21 +163,19 @@ impl Limiter for RedisLimiter {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+    use std::thread;
     use super::*;
 
-    fn redis_client() -> redis::Client {
+    fn redis_client() -> RedisClient {
         let url = format!("redis://{}:{}/{}", REDIS_HOST, REDIS_PORT, REDIS_DB);
         RedisClient::open(url.as_str()).unwrap()
     }
 
-    #[test]
-    fn test_basic() {
-        let limiter = RedisLimiter::default();
-        let key = "test_basic";
-        let capacity = 6;
-        let interval = 10;
-        assert_eq!(limiter.get_token_count(key, interval), None);
-        for i in 0..12 {
+    fn consume_many<'a>(
+        limiter: &RedisLimiter,
+        key: &'a str, interval: u32, capacity: u32, n: u32) {
+        for i in 0..n {
             let (success, count) = if i >= capacity {
                 (false, Some(0))
             } else {
@@ -183,6 +184,18 @@ mod tests {
             assert_eq!(limiter.consume_one(key, interval, capacity), success);
             assert_eq!(limiter.get_token_count(key, interval), count);
         }
+    }
+
+    #[test]
+    fn test_basic() {
+        let limiter = RedisLimiter::default();
+        let key = "test_basic";
+        let interval = 10;
+        let capacity = 6;
+
+        assert_eq!(limiter.get_token_count(key, interval), None);
+        consume_many(&limiter, key, interval, capacity, 12);
+
         let _: () = redis_client()
             .del(limiter.get_redis_key(key, interval))
             .unwrap();
@@ -192,6 +205,20 @@ mod tests {
     fn test_refill() {
         let limiter = RedisLimiter::default();
         let key = "test_refill";
-        assert_eq!(limiter.get_token_count(key, 10), None);
+        let interval = 2;
+        let capacity = 5;
+
+        assert_eq!(limiter.get_token_count(key, interval), None);
+        consume_many(&limiter, key, interval, capacity, 6);
+        assert_eq!(limiter.consume_one(key, interval, capacity), false);
+        assert_eq!(limiter.get_token_count(key, interval), Some(0));
+
+        thread::sleep(Duration::from_millis(2001));
+        assert_eq!(limiter.consume_one(key, interval, capacity), true);
+        assert_eq!(limiter.get_token_count(key, interval), Some(capacity-1));
+
+        let _: () = redis_client()
+            .del(limiter.get_redis_key(key, interval))
+            .unwrap();
     }
 }
