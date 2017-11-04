@@ -14,7 +14,7 @@ fn bench_simple(b: &mut Bencher) {
     let interval = 600;
     let capacity = 1000_0000;
     b.iter(|| {
-        limiter.consume_one(key, interval, capacity);
+        limiter.consume_one(key, interval, capacity, 1).is_ok();
     });
     let _: () = redis::Client::open("redis://127.0.0.1:6379")
         .unwrap()
