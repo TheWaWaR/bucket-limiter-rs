@@ -151,7 +151,7 @@ impl Limiter for RedisLimiter {
         let now_ms = now_ms();
         let mut invocation = self.script.prepare_invoke();
         for (key, interval, capacity, n) in args {
-            if key.len() < 1 || n < 1 || interval < 1 || capacity < 1 {
+            if key.len() < 1 || n < 1 || interval < 1 {
                 return Err(RedisConsumeError::BadArg(format!(
                     "[BadArg]: key={}, interval={}, capacity={}, n={}",
                     key, interval, capacity, n
