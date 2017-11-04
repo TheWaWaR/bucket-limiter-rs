@@ -150,7 +150,7 @@ impl Limiter for RedisLimiter {
                    -> Result<(), RedisConsumeError> {
         let now_ms = now_ms();
         let mut invocation = self.script.prepare_invoke();
-        for (ref key, interval, capacity, n) in args {
+        for (key, interval, capacity, n) in args {
             if key.len() < 1 || n < 1 || interval < 1 || capacity < 1 {
                 return Err(RedisConsumeError::BadArg(format!(
                     "[BadArg]: key={}, interval={}, capacity={}, n={}",
@@ -171,7 +171,7 @@ impl Limiter for RedisLimiter {
         let conn = try!{
             self.redis_cli
                 .get_connection()
-                .map_err(|e| RedisConsumeError::Redis(e))
+                .map_err(RedisConsumeError::Redis)
         };
         match invocation.invoke(&conn) {
             Ok((_, 0, 0, 0, 0)) => Ok(()),
