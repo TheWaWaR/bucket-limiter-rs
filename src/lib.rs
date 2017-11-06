@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 use redis::{
     Client as RedisClient,
     Script as RedisScript,
+    Connection as RedisConn,
     Commands,
 };
 
@@ -48,7 +49,8 @@ pub enum RedisConsumeError {
 }
 
 pub struct RedisLimiter {
-    redis_cli: RedisClient,
+    _redis_cli: RedisClient,
+    redis_conn: RedisConn,
     key_prefix: String,
     script: RedisScript,
 }
@@ -125,7 +127,11 @@ impl RedisLimiter {
     ) -> Self {
         let key_prefix = key_prefix.to_owned();
         let script = RedisScript::new(script_str);
-        RedisLimiter{ redis_cli, key_prefix, script }
+        let redis_conn = redis_cli.get_connection().unwrap();
+        RedisLimiter{
+            _redis_cli: redis_cli,
+            redis_conn, key_prefix, script
+        }
     }
 
     pub fn get_redis_key<'a>(&self, key: &'a str, interval: u32) -> String {
@@ -139,16 +145,14 @@ impl Default for RedisLimiter {
 
 impl Limiter for RedisLimiter {
     fn get_token_count<'a>(&self, key: &'a str, interval: u32) -> Option<u32> {
-        self.redis_cli
-            .get_connection()
-            .unwrap()
+        self.redis_conn
             .hget(self.get_redis_key(key, interval), "tokens")
             .ok()
     }
 
     fn consume<'a>(&self, args: Vec<(&'a str, u32, u32, u32)>)
                    -> Result<(), RedisConsumeError> {
-        let now_ms = now_ms();
+        let the_now_ms = now_ms();
         let mut invocation = self.script.prepare_invoke();
         for (key, interval, capacity, n) in args {
             if key.len() < 1 || n < 1 || interval < 1 {
@@ -165,15 +169,10 @@ impl Limiter for RedisLimiter {
                 .arg(interval_ms)
                 .arg(capacity)
                 .arg(n)
-                .arg(now_ms)
+                .arg(the_now_ms)
                 .arg(expire);
         }
-        let conn = try!{
-            self.redis_cli
-                .get_connection()
-                .map_err(RedisConsumeError::Redis)
-        };
-        match invocation.invoke(&conn) {
+        match invocation.invoke(&self.redis_conn) {
             Ok((_, 0, 0, 0, 0)) => Ok(()),
             Ok((redis_key, interval_ms, capacity,
                 current_tokens, last_fill_at)) => {
