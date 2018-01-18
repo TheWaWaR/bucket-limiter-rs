@@ -1,7 +1,7 @@
 * bucket-limiter-rs
 Token bucket like limiter library based on redis storage
 
-[Python version](https://github.com/TheWaWaR/bucket-limiter-py)
+[[https://github.com/TheWaWaR/bucket-limiter-py][Python version]]
 
 * Example (use case)
 Assume you have a API service, and want to limit user request rate like:
